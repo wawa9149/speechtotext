@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_key_path">"/Users/parknayoung/Desktop/STT_App/app/src/main/res/raw/speechtotext.json"</string>
+</resources>
