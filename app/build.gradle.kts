@@ -73,5 +73,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:3.10.0")
     implementation("io.grpc:grpc-stub:1.56.1")
     implementation("io.grpc:grpc-okhttp:1.46.0") // gRPC OkHttp 프로바이더
+    //implementation("androidx.annotation:annotation:1.6.0")
 
 }
