@@ -39,12 +39,15 @@ import java.text.SimpleDateFormat;
 import java.util.Set;
 import java.util.UUID;
 
+
 import com.google.cloud.speech.v1.*;
 import com.google.cloud.speech.v1.RecognitionConfig.AudioEncoding;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
+
+import okhttp3.RequestBody;
 
 public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_PERMISSION_CODE = 101;
@@ -54,11 +57,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean isRecording = false;
     private Button recordButton;
     private EditText resultTextView;
-    String bucketName = "speechtotext_app";
+    static String audioFile;
 
-    String languageCode = "ko-KR";
-
-    String audioFile;
+    private MagoSttApi mMagoSttApi = new MagoSttApi("http://saturn.mago52.com:9003/speech2text/");
 
 
     @Override
@@ -243,7 +244,6 @@ public class MainActivity extends AppCompatActivity {
             mediaRecorder.release();
             isRecording = false;
             recordButton.setText("녹음 시작");
-            //convertSpeechToText();
             startTranscription();
         } catch (IllegalStateException e) {
             e.printStackTrace();
@@ -255,13 +255,14 @@ public class MainActivity extends AppCompatActivity {
         Thread transcriptionThread = new Thread(new Runnable() {
             @Override
             public void run() {
+                String id = null; // 네트워크 메서드 호출
                 try {
-                    getResouceID();
-                    readfile();
-                    getCredentials();
-                    SpeechSettings s = getSpeechSettings();
-                    bucket();
-                    transcribeSpeech(s);
+                    mMagoSttApi.UpLoad(audioFile);
+//                    id = mMagoSttApi.UpLoad(audioFile);
+//                    String message = mMagoSttApi.Batch(id);
+//                    setTextResult(message);
+//                    String sttResult  = mMagoSttApi.GetResult();
+//                    setTextResult(sttResult);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -270,142 +271,10 @@ public class MainActivity extends AppCompatActivity {
         transcriptionThread.start();
     }
 
-    public int getResouceID() {
-
-        // Read the API key
-        Resources resources = getResources();
-        int resourceId = resources.getIdentifier("apikey", "raw", getPackageName());
-
-        if (resourceId == 0) {
-            throw new RuntimeException("API key file not found in resources.");
-        }
-
-        return resourceId;
-    }
-
-
-    public String readfile() throws IOException {
-
-        Resources resources = getResources();
-        int resourceId = getResouceID();
-
-        String key;
-        InputStream inputStream = null;
-
-        try {
-            inputStream = resources.openRawResource(resourceId);
-            byte[] buffer = new byte[inputStream.available()];
-            inputStream.read(buffer);
-            key = new String(buffer);
-
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error closing InputStream: " + e.getMessage());
-                }
-            }
-        }
-        return key;
-    }
-
-    public GoogleCredentials getCredentials() throws IOException {
-
-        String key = readfile();
-
-        // 다시 InputStream을 초기화합니다.
-        try (InputStream inputStream = new ByteArrayInputStream(key.getBytes())) {
-            // Set up the Google Cloud credentials
-            GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream);
-
-            return credentials;
-        }
-    }
-
-    public SpeechSettings getSpeechSettings() throws IOException {
-
-        GoogleCredentials credentials = getCredentials();
-
-        SpeechSettings speechSettings = SpeechSettings.newBuilder().setCredentialsProvider(() -> credentials).build();
-
-        return speechSettings;
-    }
-
-    public void bucket() throws IOException {
-
-        try {
-
-            GoogleCredentials credentials = getCredentials();
-            //String audioFileName = createAudioFile();
-
-            if (audioFile == null) {
-                Log.e(TAG, "Audio file does not exist.");
-                return;
-            }
-
-            Storage storage = StorageOptions.newBuilder().setCredentials(credentials).build().getService();
-            Path audioFilePath = Paths.get(audioFile);
-            byte[] audioData = Files.readAllBytes(audioFilePath);
-
-            BlobId blobId = BlobId.of(bucketName, audioFilePath.getFileName().toString());
-            BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
-            storage.create(blobInfo, audioData);
-
-        } catch (IOException e) {
-            Log.e(TAG, "Error reading or uploading audio file: " + e.getMessage());
-        }
-
-    }
-
-
-    public void transcribeSpeech(SpeechSettings speechSettings) throws IOException {
-
-        try (SpeechClient speechClient = SpeechClient.create(speechSettings)) {
-            //String audioFileName = createAudioFile();
-            Path audioFilePath = Paths.get(audioFile);
-
-            // Build the RecognitionAudio object
-            RecognitionAudio audio = RecognitionAudio.newBuilder()
-                    .setUri("gs://" + bucketName + "/" + audioFilePath.getFileName().toString())
-                    .build();
-
-            // Configure the recognition request
-            RecognitionConfig recognitionConfig = RecognitionConfig.newBuilder()
-                    .setEncoding(AudioEncoding.AMR_WB)
-                    .setSampleRateHertz(16000)
-                    .setLanguageCode(languageCode) //수정
-                    .build();
-
-            RecognizeRequest recognizeRequest = RecognizeRequest.newBuilder()
-                    .setConfig(recognitionConfig)
-                    .setAudio(audio)
-                    .build();
-
-            // Process the response
-            // Perform speech recognition
-            RecognizeResponse response = speechClient.recognize(recognizeRequest);
-            List<SpeechRecognitionResult> results = response.getResultsList();
-
-            if (results.isEmpty()) {
-                Log.d("Transcription", "No results found");
-            } else {
-                StringBuilder transcription = new StringBuilder();
-
-                for (SpeechRecognitionResult result : results) {
-                    transcription.append(result.getAlternatives(0).getTranscript()).append(" ");
-                    String transcript = result.getAlternatives(0).getTranscript();
-                    Log.d("Transcription : ", transcript);
-                }
-
-                // Set the transcription in the TextView
-                runOnUiThread(() -> {
-                    resultTextView.setText(transcription.toString());
-                });
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error performing speech recognition: " + e.getMessage());
-        }
+    public void setTextResult(String textResult){
+        // Set the transcription in the TextView
+        runOnUiThread(() -> {
+            resultTextView.setText(textResult);
+        });
     }
 }
