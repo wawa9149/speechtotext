@@ -257,12 +257,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 String id = null; // 네트워크 메서드 호출
                 try {
-                    mMagoSttApi.UpLoad(audioFile);
-//                    id = mMagoSttApi.UpLoad(audioFile);
-//                    String message = mMagoSttApi.Batch(id);
-//                    setTextResult(message);
-//                    String sttResult  = mMagoSttApi.GetResult();
-//                    setTextResult(sttResult);
+                    id = mMagoSttApi.UpLoad(audioFile);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -271,10 +266,10 @@ public class MainActivity extends AppCompatActivity {
         transcriptionThread.start();
     }
 
-    public void setTextResult(String textResult){
+    public void setTextResult(String id){
         // Set the transcription in the TextView
         runOnUiThread(() -> {
-            resultTextView.setText(textResult);
+            resultTextView.setText(id);
         });
     }
 }
