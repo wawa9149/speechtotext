@@ -22,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
     private Button recordButton;
     private EditText resultTextView;
     static String audioFile;
+
+    // 클래스 외부에 변수 선언 방법 찾아보기
     private MagoSttApi mMagoSttApi = new MagoSttApi("http://saturn.mago52.com:9003/speech2text/"); // 클래스 객체 생성 & 호출
 
     @Override
@@ -131,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // pause 관련 메서드 고려
     private void stopRecording() {
 
         if (!isRecording) {
@@ -142,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
             mediaRecorder.release();
             isRecording = false;
             recordButton.setText("녹음 시작");
+            // 클래스로 분리, result에 따라 관리할 수 있도록 설계
             startTranscription();
             //setTextResult();
         } catch (IllegalStateException e) {
@@ -156,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
+
                    String id = mMagoSttApi.UpLoad(audioFile);
 
                    String message = mMagoSttApi.Batch(id);
