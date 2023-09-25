@@ -1,66 +1,28 @@
 package com.example.stt_app;
 
-import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
-
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.content.res.Resources;
-
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 
 import android.media.MediaRecorder;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
-import com.google.auth.oauth2.GoogleCredentials;
-
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Date;
-import java.text.SimpleDateFormat;
-import java.util.Set;
 import java.util.UUID;
 
-
-import com.google.cloud.speech.v1.*;
-import com.google.cloud.speech.v1.RecognitionConfig.AudioEncoding;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
-
-import okhttp3.RequestBody;
-
 public class MainActivity extends AppCompatActivity {
-    private static final int REQUEST_PERMISSION_CODE = 101;
-    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
-    private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION = 201;
     private MediaRecorder mediaRecorder;
     private boolean isRecording = false;
     private Button recordButton;
     private EditText resultTextView;
     static String audioFile;
-
-    private MagoSttApi mMagoSttApi = new MagoSttApi("http://saturn.mago52.com:9003/speech2text/");
-
+    private MagoSttApi mMagoSttApi = new MagoSttApi("http://saturn.mago52.com:9003/speech2text/"); // 클래스 객체 생성 & 호출
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,8 +32,10 @@ public class MainActivity extends AppCompatActivity {
         recordButton = findViewById(R.id.recordBtn);
         resultTextView = findViewById(R.id.resultTextView);
 
+        // permissions 클래스 객체 생성
+        Permissions mPermissions = new Permissions();
         //request permission
-        requestPermissions();
+        mPermissions.requestPermissions(this);
 
         //Press the Button to start & stop recording
         recordButton.setOnClickListener(new View.OnClickListener() {
@@ -90,77 +54,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //Request permissions
-    private void requestPermissions() {
-        //Check the version, API 26 or higher
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            String[] permissions = {
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-            };
-
-            boolean allPermissionsGranted = true; // Authorization status
-
-            //Check current permission status
-            for (String permission : permissions) {
-                //If permission is not granted
-                if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                    allPermissionsGranted = false; //Set to 'false' if permission is not granted
-                    ActivityCompat.requestPermissions(this, new String[]{permission},
-                            getPermissionRequestCode(permission)); //Request permissions
-                }
-            }
-            //Check with log if all permissions have been granted
-            if (allPermissionsGranted) {
-                Log.d("TAG", "Permission is granted!");
-            }
-        }
-    }
-
-    //Permission request code
-    private int getPermissionRequestCode(String permission) {
-        switch (permission) {
-            case Manifest.permission.RECORD_AUDIO:
-                return REQUEST_RECORD_AUDIO_PERMISSION;
-            case Manifest.permission.WRITE_EXTERNAL_STORAGE:
-                return REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION;
-            default:
-                return REQUEST_PERMISSION_CODE;
-        }
-    }
-
-    // Handle permission request results
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case REQUEST_RECORD_AUDIO_PERMISSION:
-                handlePermissionResult(grantResults, Manifest.permission.RECORD_AUDIO, "Audio_Permission");
-                break;
-
-            case REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION:
-                handlePermissionResult(grantResults, Manifest.permission.WRITE_EXTERNAL_STORAGE, "Write_Storage_Permission");
-                break;
-
-            case REQUEST_PERMISSION_CODE:
-                handleMultiplePermissionResult(grantResults, "Multiple_Permissions");
-                break;
-        }
-    }
-
-    private void handlePermissionResult(int[] grantResults, String permissionName, String logMessage) {
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Log.d("TAG", logMessage + " is granted!");
-        } else {
-            Toast.makeText(this, "설정 앱으로 가서 " + permissionName + " 권한을 활성화해주세요.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void handleMultiplePermissionResult(int[] grantResults, String logMessage) {
-        handlePermissionResult(grantResults, logMessage, logMessage);
-    }
-
     public String FileName() {
+        // 파일 이름 랜덤 생성
+        // parameters
+        // Returns
+        // String uuid
 
         String uuid = UUID.randomUUID().toString().replace("-", "");
         //System.out.println(uuid);
@@ -179,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 외부 저장소 앱별 디렉터리에 파일 생성
         //String timeStamp = new SimpleDateFormat("yyMMdd_HHmm", Locale.getDefault()).format(new Date());
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_MUSIC); // 디렉터리 변경
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_MUSIC); // 외부 저장소의 앱 전용 디렉터리에 저장, 'Music'이라는 디렉터리를 생성하고 거기에 파일 저장
 
         if (storageDir != null) {
             audioFile = new File(storageDir, uuid).getAbsolutePath();
@@ -196,11 +94,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        try {
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 
         // 설정한 출력 포맷 및 인코더가 올바른지 확인
-        try {
             mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_WB);
             mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
         } catch (IllegalStateException e) {
@@ -245,31 +143,34 @@ public class MainActivity extends AppCompatActivity {
             isRecording = false;
             recordButton.setText("녹음 시작");
             startTranscription();
+            //setTextResult();
         } catch (IllegalStateException e) {
             e.printStackTrace();
             Toast.makeText(this, "녹음을 중지할 수 없습니다.", Toast.LENGTH_SHORT).show();
         }
     }
 
+    // backgroud에서 MagoSttApi실행
     public void startTranscription() {
         Thread transcriptionThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                String id = null; // 네트워크 메서드 호출
                 try {
-                    id = mMagoSttApi.UpLoad(audioFile);
+                   String id = mMagoSttApi.UpLoad(audioFile);
+
+                   String message = mMagoSttApi.Batch(id);
+                   // 메시지를 UI 쓰레드에 전달하여 TextView에 설정
+                   runOnUiThread(() -> resultTextView.setText(message));
+
+                   String result = mMagoSttApi.GetResult(id);
+                   // 메시지를 UI 쓰레드에 전달하여 TextView에 설정
+                   runOnUiThread(() -> resultTextView.setText(result));
+
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             }
         });
         transcriptionThread.start();
-    }
-
-    public void setTextResult(String id){
-        // Set the transcription in the TextView
-        runOnUiThread(() -> {
-            resultTextView.setText(id);
-        });
     }
 }
